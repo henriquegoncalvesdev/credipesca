@@ -1,0 +1,175 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// USUÁRIOS E AUTENTICAÇÃO
+// ========================================
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String
+  password  String
+  role      UserRole @default(USER)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relacionamentos
+  clients   Client[]
+  projects  Project[]
+  documents Document[]
+
+  @@map("users")
+}
+
+enum UserRole {
+  ADMIN
+  MANAGER
+  USER
+}
+
+// ========================================
+// CLIENTES
+// ========================================
+
+model Client {
+  id          String   @id @default(cuid())
+  name        String
+  email       String?
+  phone       String?
+  cpfCnpj     String?  @unique
+  address     String?
+  city        String?
+  state       String?
+  zipCode     String?
+  notes       String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relacionamentos
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projects    Project[]
+  documents   Document[]
+
+  @@map("clients")
+}
+
+// ========================================
+// PROJETOS
+// ========================================
+
+model Project {
+  id          String        @id @default(cuid())
+  title       String
+  description String?
+  status      ProjectStatus @default(ACTIVE)
+  startDate   DateTime?
+  endDate     DateTime?
+  budget      Decimal?      @db.Decimal(10, 2)
+  notes       String?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  // Relacionamentos
+  userId      String
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  documents   Document[]
+
+  @@map("projects")
+}
+
+enum ProjectStatus {
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  ON_HOLD
+}
+
+// ========================================
+// DOCUMENTOS
+// ========================================
+
+model Document {
+  id          String         @id @default(cuid())
+  title       String
+  type        DocumentType
+  content     Json?          // Conteúdo do documento em formato JSON
+  filePath    String?        // Caminho do arquivo gerado
+  fileName    String?        // Nome do arquivo
+  fileSize    Int?           // Tamanho do arquivo em bytes
+  mimeType    String?        // Tipo MIME do arquivo
+  status      DocumentStatus @default(DRAFT)
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  // Relacionamentos
+  userId      String
+  user        User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clientId    String
+  client      Client         @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  projectId   String?
+  project     Project?       @relation(fields: [projectId], references: [id], onDelete: SetNull)
+
+  @@map("documents")
+}
+
+enum DocumentType {
+  CUSTEIO
+  INVESTIMENTO
+  RELATORIO
+  CONTRATO
+  OUTRO
+}
+
+enum DocumentStatus {
+  DRAFT
+  REVIEW
+  APPROVED
+  REJECTED
+  PUBLISHED
+}
+
+// ========================================
+// TEMPLATES DE DOCUMENTOS
+// ========================================
+
+model DocumentTemplate {
+  id          String   @id @default(cuid())
+  name        String
+  type        DocumentType
+  content     Json     // Template em formato JSON
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("document_templates")
+}
+
+// ========================================
+// CONFIGURAÇÕES DO SISTEMA
+// ========================================
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("system_configs")
+} 
